@@ -13,8 +13,8 @@ class PatchEmbedding(nn.Module):
     # 2. Initialize the class with appropriate variables
     def __init__(self, 
                  in_channels:int=3,
-                 patch_size:int=12,
-                 embedding_dim:int=512):
+                 patch_size:int=16,
+                 embedding_dim:int=768):
         super().__init__()
         self.patch_size = patch_size
         # 3. Create a layer to turn an image into patches
@@ -49,8 +49,8 @@ class MultiheadSelfAttentionBlock(nn.Module):
     """
     # 2. Initialize the class with hyperparameters from Table 1
     def __init__(self,
-                 embedding_dim:int=512, # Hidden size D from Table 1 for ViT-Base
-                 num_heads:int=8, # Heads from Table 1 for ViT-Base
+                 embedding_dim:int=768, # Hidden size D from Table 1 for ViT-Base
+                 num_heads:int=12, # Heads from Table 1 for ViT-Base
                  attn_dropout:float=0): # doesn't look like the paper uses any dropout in MSABlocks
         super().__init__()
         
@@ -77,7 +77,7 @@ class MLPBlock(nn.Module):
     """Creates a layer normalized multilayer perceptron block ("MLP block" for short)."""
     # 2. Initialize the class with hyperparameters from Table 1 and Table 3
     def __init__(self,
-                 embedding_dim:int=512, # Hidden Size D from Table 1 for ViT-Base
+                 embedding_dim:int=768, # Hidden Size D from Table 1 for ViT-Base
                  mlp_size:int=3072, # MLP size from Table 1 for ViT-Base
                  dropout:float=0.1): # Dropout from Table 3 for ViT-Base
         super().__init__()
@@ -107,8 +107,8 @@ class TransformerEncoderBlock(nn.Module):
     """Creates a Transformer Encoder block."""
     # 2. Initialize the class with hyperparameters from Table 1 and Table 3
     def __init__(self,
-                 embedding_dim:int=512, # Hidden size D from Table 1 for ViT-Base
-                 num_heads:int=8, # Heads from Table 1 for ViT-Base
+                 embedding_dim:int=768, # Hidden size D from Table 1 for ViT-Base
+                 num_heads:int=12, # Heads from Table 1 for ViT-Base
                  mlp_size:int=3072, # MLP size from Table 1 for ViT-Base
                  mlp_dropout:float=0.1, # Amount of dropout for dense layers from Table 3 for ViT-Base
                  attn_dropout:float=0): # Amount of dropout for attention layers
@@ -140,13 +140,13 @@ class ViT(nn.Module):
     """Creates a Vision Transformer architecture with ViT-Base hyperparameters by default."""
     # 2. Initialize the class with hyperparameters from Table 1 and Table 3
     def __init__(self,
-                 img_size:int=120, # Training resolution from Table 3 in ViT paper
+                 img_size:int=224, # Training resolution from Table 3 in ViT paper
                  in_channels:int=3, # Number of channels in input image
-                 patch_size:int=12, # Patch size
+                 patch_size:int=16, # Patch size
                  num_transformer_layers:int=12, # Layers from Table 1 for ViT-Base
-                 embedding_dim:int=512, # Hidden size D from Table 1 for ViT-Base
+                 embedding_dim:int=768, # Hidden size D from Table 1 for ViT-Base
                  mlp_size:int=3072, # MLP size from Table 1 for ViT-Base
-                 num_heads:int=8, # Heads from Table 1 for ViT-Base
+                 num_heads:int=12, # Heads from Table 1 for ViT-Base
                  attn_dropout:float=0, # Dropout for attention projection
                  mlp_dropout:float=0.1, # Dropout for dense/MLP layers 
                  embedding_dropout:float=0.1, # Dropout for patch and position embeddings

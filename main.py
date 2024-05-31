@@ -66,11 +66,11 @@ def load_model(load_dir, save_dir):
     return log, save_dir, model_file, start_epoch, best_val_auc
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-img_size", default=120, type=int)
-    parser.add_argument("-batch_size", default=10, type=int)
-    parser.add_argument("-patch_size", default=12, type=int)
+    parser.add_argument("-img_size", default=224, type=int)
+    parser.add_argument("-batch_size", default=16, type=int)
+    parser.add_argument("-patch_size", default=16, type=int)
     parser.add_argument("-embedding_dim", default=512, type=int)
-    parser.add_argument("-num_heads", default=8, type=int)
+    parser.add_argument("-num_heads", default=16, type=int)
     parser.add_argument("-lr", default=1e-3, type=float)
     parser.add_argument("-betas", default=(0.9, 0.999), type=any)
     parser.add_argument("-weight_decay", default=0.3, type=float)
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     parser.add_argument("-load_dir", default="", type=str)
     parser.add_argument("-saved_dir", default="logs", type=str)
     parser.add_argument("-model_name", default="ViT.pt", type=str)
-    parser.add_argument("-epochs", default=10, type=int)
+    parser.add_argument("-epochs", default=50, type=int)
     args = parser.parse_args()
 
     # Create transform pipeline manually
@@ -148,7 +148,8 @@ if __name__ == '__main__':
 
     print(patch_embedding_class_token)  #1 is added in the beginning of each
 
-    transformer_encoder_block = TransformerEncoderBlock(embedding_dim=args.embedding_dim)
+    transformer_encoder_block = TransformerEncoderBlock(embedding_dim=args.embedding_dim, 
+                                                        num_heads=args.num_heads)
     summary(model=transformer_encoder_block,
         input_size=(args.batch_size, 197, args.embedding_dim), # (batch_size, num_patches, embedding_dimension)
         col_names=["input_size", "output_size", "num_params", "trainable"],
