@@ -22,8 +22,8 @@ def CopyImgToDest(class_name, source_path):
     random.shuffle(imgs_list)
 
     # determine the number of images for each set
-    train_size = int(len(imgs_list) * 0.8)
-    val_size = int(len(imgs_list) * 0.2)
+    train_size = int(len(imgs_list) * 0.3)
+    val_size = int(len(imgs_list) * 0.1)
     
     # Create destination folders if they don't exist
     for folder_path in [train_folder, val_folder]:
@@ -47,7 +47,7 @@ def DataPreprocess():
     # class_names = ['Bicycle', 'Bridge', 'Bus', 'Car', 'Chimney', 'Crosswalk']
     # class_names = ['Bicycle', 'Bridge', 'Bus']
     for images_type_name in images_type_names:
-        class_path = os.path.join("data/", images_type_name)
+        class_path = os.path.join("data", images_type_name)
         for class_name in class_names:
             source_path = os.path.join(class_path,class_name)
             CopyImgToDest(class_name, source_path)

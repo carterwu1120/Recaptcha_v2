@@ -1,4 +1,5 @@
 # https://github.com/AarohiSingla/Image-Classification-Using-Vision-transformer/blob/main/image_classifier_from_scratch.ipynb
+# https://hyper.ai/tutorials/24825
 import torch
 from torchvision import transforms
 from torch import nn
@@ -7,10 +8,10 @@ from tqdm.auto import tqdm
 import argparse
 import os
 import datetime
-from going_modular.going_modular import engine
+# from going_modular.going_modular import engine
+from model_run import train_step, test_step
 from data_loader import create_dataloaders
 from model import *
-from going_modular.going_modular import engine
 # To check out our ViT model's loss curves, we can use the plot_loss_curves function from helper_functions.py
 from helper_functions import plot_loss_curves
 
@@ -46,7 +47,7 @@ def load_model(load_dir, save_dir):
     
     save_dir = '{}/{}/'.format(save_dir, load_dir)
 
-    model_file = os.path.join(save_dir, 'VIT.pt')    
+    model_file = os.path.join(save_dir, 'ViT.pt')    
 
     # store data by dictionary
     # dict_keys(['epoch', 'model_state_dict', 'optimizer_state_dict', 'scheduler_state_dict', 'loss', 'auc'])
@@ -66,14 +67,17 @@ def load_model(load_dir, save_dir):
     return log, save_dir, model_file, start_epoch, best_val_auc
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-img_size", default=224, type=int)
+    parser.add_argument("-img_size", default=72, type=int)
     parser.add_argument("-batch_size", default=16, type=int)
-    parser.add_argument("-patch_size", default=16, type=int)
-    parser.add_argument("-embedding_dim", default=512, type=int)
-    parser.add_argument("-num_heads", default=16, type=int)
+    parser.add_argument("-patch_size", default=6, type=int)
+    parser.add_argument("-embedding_dim", default=64, type=int)
+    parser.add_argument("-mlp_size", default=256, type=int)
+    parser.add_argument("-num_heads", default=4, type=int)
+    parser.add_argument("-attn_dropout", default=0, type=float)
+    parser.add_argument("-mlp_dropout", default=0.1, type=float)
     parser.add_argument("-lr", default=1e-3, type=float)
     parser.add_argument("-betas", default=(0.9, 0.999), type=any)
-    parser.add_argument("-weight_decay", default=0.3, type=float)
+    parser.add_argument("-weight_decay", default=0.001, type=float)
     parser.add_argument("-data_dir", default="data", type=str)
     parser.add_argument("-load_dir", default="", type=str)
     parser.add_argument("-saved_dir", default="logs", type=str)
@@ -83,8 +87,10 @@ if __name__ == '__main__':
 
     # Create transform pipeline manually
     manual_transforms = transforms.Compose([
+        
         transforms.Resize((args.img_size, args.img_size)),
         transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])           
     print(f"Manually created transforms: {manual_transforms}")
 
@@ -151,7 +157,7 @@ if __name__ == '__main__':
     transformer_encoder_block = TransformerEncoderBlock(embedding_dim=args.embedding_dim, 
                                                         num_heads=args.num_heads)
     summary(model=transformer_encoder_block,
-        input_size=(args.batch_size, 197, args.embedding_dim), # (batch_size, num_patches, embedding_dimension)
+        input_size=(args.batch_size, number_of_patches, args.embedding_dim), # (batch_size, num_patches, embedding_dimension)
         col_names=["input_size", "output_size", "num_params", "trainable"],
         col_width=20,
         row_settings=["var_names"]
@@ -163,7 +169,10 @@ if __name__ == '__main__':
     model = ViT(img_size=args.img_size, 
                 patch_size=args.patch_size, 
                 embedding_dim=args.embedding_dim,
+                mlp_size=args.mlp_size,
                 num_heads=args.num_heads,
+                attn_dropout=args.attn_dropout,
+                mlp_dropout=args.mlp_dropout,
                 num_classes=len(class_names))
 
     print("going to training")
@@ -185,17 +194,19 @@ if __name__ == '__main__':
     # Train the model and save the training results to a dictionary
     results = {"train_loss": [],
                "train_acc": [],
+               "train_auc": [],
                "test_loss": [],
-               "test_acc": []
+               "test_acc": [],
+               "test_auc": [],
     }
     best_epoch = start_epoch
     for epoch in tqdm(range(start_epoch, args.epochs)):
-        train_loss, train_acc = engine.train_step(model=model,
+        train_loss, train_acc,train_auc = train_step(model=model,
                                           dataloader=train_dataloader,
                                           loss_fn=loss_fn,
                                           optimizer=optimizer,
                                           device=device)
-        test_loss, test_acc = engine.test_step(model=model,
+        test_loss, test_acc, test_auc = test_step(model=model,
           dataloader=test_dataloader,
           loss_fn=loss_fn,
           device=device)
@@ -208,6 +219,7 @@ if __name__ == '__main__':
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss': train_loss,
                 'acc': test_acc,
+                'auc' : test_auc
                 }, model_file)
             
         # Print out what's happening
@@ -215,16 +227,20 @@ if __name__ == '__main__':
           f"Epoch: {epoch+1} | "
           f"train_loss: {train_loss:.4f} | "
           f"train_acc: {train_acc:.4f} | "
+          f"train_auc: {train_acc:.4f} | "
           f"test_loss: {test_loss:.4f} | "
-          f"test_acc: {test_acc:.4f}",
+          f"test_acc: {test_acc:.4f} | "
+          f"test_auc: {train_auc:.4f} | ",
           file = log)
         log.flush()
 
         # Update results dictionary
         results["train_loss"].append(train_loss)
         results["train_acc"].append(train_acc)
+        results["train_auc"].append(train_auc)
         results["test_loss"].append(test_loss)
         results["test_acc"].append(test_acc)
+        results["test_auc"].append(test_auc)
         if epoch-best_epoch > 5:
             print('best epoch is ', best_epoch)
             break

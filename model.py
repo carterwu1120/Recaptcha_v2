@@ -180,7 +180,8 @@ class ViT(nn.Module):
         self.transformer_encoder = nn.Sequential(*[TransformerEncoderBlock(embedding_dim=embedding_dim,
                                                                             num_heads=num_heads,
                                                                             mlp_size=mlp_size,
-                                                                            mlp_dropout=mlp_dropout) for _ in range(num_transformer_layers)])
+                                                                            mlp_dropout=mlp_dropout,
+                                                                            attn_dropout=attn_dropout) for _ in range(num_transformer_layers)])
        
         # 10. Create classifier head
         self.classifier = nn.Sequential(
