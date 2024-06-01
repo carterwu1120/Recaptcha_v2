@@ -27,6 +27,26 @@ def set_seeds(seed: int=123):
     torch.manual_seed(seed)
     # Set the seed for CUDA torch operations (ones that happen on the GPU)
     torch.cuda.manual_seed(seed)
+def get_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-img_size", default=72, type=int)
+    parser.add_argument("-batch_size", default=16, type=int)
+    parser.add_argument("-patch_size", default=6, type=int)
+    parser.add_argument("-embedding_dim", default=64, type=int)
+    parser.add_argument("-mlp_size", default=256, type=int)
+    parser.add_argument("-num_heads", default=4, type=int)
+    parser.add_argument("-attn_dropout", default=0, type=float)
+    parser.add_argument("-mlp_dropout", default=0.1, type=float)
+    parser.add_argument("-lr", default=1e-3, type=float)
+    parser.add_argument("-betas", default=(0.9, 0.999), type=any)
+    parser.add_argument("-weight_decay", default=0.001, type=float)
+    parser.add_argument("-data_dir", default="data\\2classes_data", type=str)
+    parser.add_argument("-load_dir", default="", type=str)
+    parser.add_argument("-save_dir", default="logs", type=str)
+    parser.add_argument("-model_name", default="ViT.pt", type=str)
+    parser.add_argument("-epochs", default=200, type=int)
+    return parser
+
 def save_train(save_dir):
     log = None
     now = datetime.datetime.now()
@@ -64,24 +84,9 @@ def load_model(load_dir, save_dir):
 
     return log, save_dir, model_file, start_epoch, best_val_auc
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-img_size", default=72, type=int)
-    parser.add_argument("-batch_size", default=16, type=int)
-    parser.add_argument("-patch_size", default=6, type=int)
-    parser.add_argument("-embedding_dim", default=64, type=int)
-    parser.add_argument("-mlp_size", default=256, type=int)
-    parser.add_argument("-num_heads", default=4, type=int)
-    parser.add_argument("-attn_dropout", default=0, type=float)
-    parser.add_argument("-mlp_dropout", default=0.1, type=float)
-    parser.add_argument("-lr", default=1e-3, type=float)
-    parser.add_argument("-betas", default=(0.9, 0.999), type=any)
-    parser.add_argument("-weight_decay", default=0.001, type=float)
-    parser.add_argument("-data_dir", default="data\\2classes_data", type=str)
-    parser.add_argument("-load_dir", default="", type=str)
-    parser.add_argument("-save_dir", default="logs", type=str)
-    parser.add_argument("-model_name", default="ViT.pt", type=str)
-    parser.add_argument("-epochs", default=200, type=int)
+    parser = get_parser()
     args = parser.parse_args()
+    print(args)
 
     # Create transform pipeline manually
     manual_transforms = transforms.Compose([
@@ -185,6 +190,11 @@ if __name__ == '__main__':
         log, save_dir, model_file = save_train(args.save_dir)
         start_epoch = 0  
         best_acc = 0 
+    
+    # Save args
+    print(args, file=log,end="\n-\n")
+    log.flush()
+
     # Setup the loss function for multi-class classification
     # loss_fn = torch.nn.BCELoss()
     loss_fn = torch.nn.CrossEntropyLoss()
