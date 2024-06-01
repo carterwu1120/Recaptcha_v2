@@ -8,13 +8,12 @@ from tqdm.auto import tqdm
 import argparse
 import os
 import datetime
-# from going_modular.going_modular import engine
-from model_run import train_step, test_step
+from going_modular.going_modular import engine
+# from model_run import train_step, test_step
 from data_loader import create_dataloaders
 from model import *
 # To check out our ViT model's loss curves, we can use the plot_loss_curves function from helper_functions.py
 from helper_functions import plot_loss_curves
-
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 # Set seeds
@@ -55,14 +54,13 @@ def load_model(load_dir, save_dir):
     
     model.load_state_dict(checkpoint['model_state_dict'])
     
-    if args.mode == 0:
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     start_epoch = checkpoint['epoch']
     #best_val_loss = checkpoint['loss']
-    best_val_auc = checkpoint['auc']
+    best_val_auc = checkpoint['acc']
 
     log_file = os.path.join(save_dir, '_log.txt')
-    log = open(log_file, 'w')
+    log = open(log_file, 'a')
 
     return log, save_dir, model_file, start_epoch, best_val_auc
 if __name__ == '__main__':
@@ -78,11 +76,11 @@ if __name__ == '__main__':
     parser.add_argument("-lr", default=1e-3, type=float)
     parser.add_argument("-betas", default=(0.9, 0.999), type=any)
     parser.add_argument("-weight_decay", default=0.001, type=float)
-    parser.add_argument("-data_dir", default="data", type=str)
+    parser.add_argument("-data_dir", default="data\\2classes_data", type=str)
     parser.add_argument("-load_dir", default="", type=str)
-    parser.add_argument("-saved_dir", default="logs", type=str)
+    parser.add_argument("-save_dir", default="logs", type=str)
     parser.add_argument("-model_name", default="ViT.pt", type=str)
-    parser.add_argument("-epochs", default=50, type=int)
+    parser.add_argument("-epochs", default=200, type=int)
     args = parser.parse_args()
 
     # Create transform pipeline manually
@@ -155,7 +153,7 @@ if __name__ == '__main__':
     print(patch_embedding_class_token)  #1 is added in the beginning of each
 
     transformer_encoder_block = TransformerEncoderBlock(embedding_dim=args.embedding_dim, 
-                                                        num_heads=args.num_heads)
+                                                        num_heads=args.num_heads).to(device)
     summary(model=transformer_encoder_block,
         input_size=(args.batch_size, number_of_patches, args.embedding_dim), # (batch_size, num_patches, embedding_dimension)
         col_names=["input_size", "output_size", "num_params", "trainable"],
@@ -173,7 +171,7 @@ if __name__ == '__main__':
                 num_heads=args.num_heads,
                 attn_dropout=args.attn_dropout,
                 mlp_dropout=args.mlp_dropout,
-                num_classes=len(class_names))
+                num_classes=len(class_names)).to(device)
 
     print("going to training")
     # Setup the optimizer to optimize our ViT model parameters using hyperparameters from the ViT paper 
@@ -182,9 +180,9 @@ if __name__ == '__main__':
                                 betas=args.betas, # default values but also mentioned in ViT paper section 4.1 (Training & Fine-tuning)
                                 weight_decay=args.weight_decay) # from the ViT paper section 4.1 (Training & Fine-tuning) and Table 3 for ViT-* ImageNet-1k
     if args.load_dir:
-        log, save_dir, model_file, start_epoch, best_acc = load_model(args.load_dir, args.saved_dir)
+        log, save_dir, model_file, start_epoch, best_acc = load_model(args.load_dir, args.save_dir)
     else:
-        log, save_dir, model_file = save_train(args.saved_dir)
+        log, save_dir, model_file = save_train(args.save_dir)
         start_epoch = 0  
         best_acc = 0 
     # Setup the loss function for multi-class classification
@@ -201,16 +199,16 @@ if __name__ == '__main__':
     }
     best_epoch = start_epoch
     for epoch in tqdm(range(start_epoch, args.epochs)):
-        train_loss, train_acc,train_auc = train_step(model=model,
+        train_loss, train_acc = engine.train_step(model=model,
                                           dataloader=train_dataloader,
                                           loss_fn=loss_fn,
                                           optimizer=optimizer,
                                           device=device)
-        test_loss, test_acc, test_auc = test_step(model=model,
+        test_loss, test_acc = engine.test_step(model=model,
           dataloader=test_dataloader,
           loss_fn=loss_fn,
           device=device)
-        if (test_acc > best_acc):
+        if (test_acc >= best_acc):
             best_acc = test_acc
             best_epoch = epoch
             print(f"[INFO] Saving model to: {model_file}")
@@ -218,30 +216,23 @@ if __name__ == '__main__':
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss': train_loss,
-                'acc': test_acc,
-                'auc' : test_auc
+                'acc': test_acc
                 }, model_file)
             
-        # Print out what's happening
-        print(
-          f"Epoch: {epoch+1} | "
-          f"train_loss: {train_loss:.4f} | "
-          f"train_acc: {train_acc:.4f} | "
-          f"train_auc: {train_acc:.4f} | "
-          f"test_loss: {test_loss:.4f} | "
-          f"test_acc: {test_acc:.4f} | "
-          f"test_auc: {train_auc:.4f} | ",
-          file = log)
-        log.flush()
+            # Print out what's happening
+            print(
+            f"Epoch: {epoch+1} | "
+            f"train_loss: {train_loss:.4f} | "
+            f"train_acc: {train_acc:.4f} | "
+            f"test_loss: {test_loss:.4f} | "
+            f"test_acc: {test_acc:.4f} | ",
+            file = log)
+            log.flush()
 
         # Update results dictionary
         results["train_loss"].append(train_loss)
         results["train_acc"].append(train_acc)
-        results["train_auc"].append(train_auc)
         results["test_loss"].append(test_loss)
         results["test_acc"].append(test_acc)
-        results["test_auc"].append(test_auc)
-        if epoch-best_epoch > 5:
-            print('best epoch is ', best_epoch)
-            break
-    plot_loss_curves(results)
+        
+    plot_loss_curves(results, args.save_dir)

@@ -47,21 +47,25 @@ def train_step(model: torch.nn.Module,
         y_pred = model(X)
         loss = loss_fn(y_pred, y)
 
-        # train_loss += loss.item() 
+        train_loss += loss.item() 
 
         loss.backward()
 
         optimizer.step()
 
         y_pred_class = torch.argmax(torch.softmax(y_pred, dim=1), dim=1)
-        pred_list.append(y_pred_class)
-        target_list.append(y)
-    all_pred = np.concatenate(pred_list, axis=0)
-    all_target = np.concatenate(target_list, axis=0)
-    loss = loss_fn(all_pred, all_target)
+        pred_list.append(y_pred_class.cpu().detach().numpy())
+        target_list.append(y.cpu().detach().numpy())
+    
+    all_pred = np.concatenate(np.array(pred_list), axis=0)
+    all_target = np.concatenate(np.array(target_list), axis=0)
+    # all_pred = torch.cat(pred_list, dim=0)
+    # all_target = torch.cat(target_list, dim=0)
+    # loss = loss_fn(all_pred, all_target)
+    train_loss = train_loss / len(dataloader)
     acc = metrics.accuracy_score(all_target, all_pred)
     auc = metrics.roc_auc_score(all_target, all_pred)
-    return loss, acc, auc
+    return train_loss, acc, auc
 
 def test_step(model: torch.nn.Module, 
               dataloader: torch.utils.data.DataLoader, 
@@ -108,11 +112,14 @@ def test_step(model: torch.nn.Module,
             # Calculate and accumulate accuracy
             test_pred_labels = test_pred_logits.argmax(dim=1)
             
-            pred_list.append(test_pred_labels)
+            pred_list.append(test_pred_labels.cpu().detach().numpy())
             target_list.append(y)
-        all_pred = np.concatenate(pred_list, axis=0)
-        all_target = np.concatenate(target_list, axis=0)
-        loss = loss_fn(all_pred, all_target)
+        all_pred = np.concatenate(np.array(pred_list), axis=0)
+        all_target = np.concatenate(np.array(target_list), axis=0)
+        # all_pred = torch.cat(pred_list, dim=0)
+        # all_target = torch.cat(target_list, dim=0)
+        # loss = loss_fn(all_pred, all_target)
+        test_loss = test_loss / len(dataloader)
         acc = metrics.accuracy_score(all_target, all_pred)
         auc = metrics.roc_auc_score(all_target, all_pred)
         return loss, acc, auc

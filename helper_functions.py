@@ -72,7 +72,7 @@ def print_train_time(start, end, device=None):
 
 
 # Plot loss curves of a model
-def plot_loss_curves(results):
+def plot_loss_curves(results, saved_dir):
     """Plots training curves of a results dictionary.
 
     Args:
@@ -107,7 +107,8 @@ def plot_loss_curves(results):
     plt.title("Accuracy")
     plt.xlabel("Epochs")
     plt.legend()
-    plt.savefig('0528.png')
+    saved_dir=os.path.join(saved_dir, 'Figure_1')
+    plt.savefig(saved_dir+'.png')
     plt.show()
 
 

@@ -3,9 +3,7 @@
 import os
 import random
 import shutil
-def CopyImgToDest(class_name, source_path):
-    data_path = "data"
-    # path to destination folders
+def CopyImgToDest(data_path, class_name, source_path):
 
     train_folder = os.path.join(os.path.join(data_path, 'train'), class_name)
     val_folder = os.path.join(os.path.join(data_path, 'test'), class_name)
@@ -22,7 +20,7 @@ def CopyImgToDest(class_name, source_path):
     random.shuffle(imgs_list)
 
     # determine the number of images for each set
-    train_size = int(len(imgs_list) * 0.3)
+    train_size = int(len(imgs_list) * 0.2)
     val_size = int(len(imgs_list) * 0.1)
     
     # Create destination folders if they don't exist
@@ -40,18 +38,16 @@ def CopyImgToDest(class_name, source_path):
             break
         shutil.copy(os.path.join(source_path, f), os.path.join(dest_folder, f))
         
-def DataPreprocess():
+def DataPreprocess(data_path):
     # images_type_names = ['1_image', '9_image']
-    images_type_names = ['1_image']
-    class_names = ['Bicycle', 'Bridge', 'Bus', 'Car', 'Chimney', 'Crosswalk', 'Hydrant', 'Motorcycle', 'Other', 'Palm', 'Stair']
-    # class_names = ['Bicycle', 'Bridge', 'Bus', 'Car', 'Chimney', 'Crosswalk']
-    # class_names = ['Bicycle', 'Bridge', 'Bus']
+    images_type_names = ['new_images_from1','new_images_from9']
+    class_names = ['Bicycle', 'Bus', 'Car', 'Chimney', 'Crosswalk', 'Hydrant', 'Motorcycle', 'Other', 'Palm', 'Stair','Tlight']
     for images_type_name in images_type_names:
-        class_path = os.path.join("data", images_type_name)
+        class_path = os.path.join(data_path, images_type_name)
         for class_name in class_names:
             source_path = os.path.join(class_path,class_name)
-            CopyImgToDest(class_name, source_path)
+            CopyImgToDest(data_path, images_type_name, source_path)
 
 if __name__ == '__main__':
-
-    DataPreprocess()
+    data_path = os.path.join("data", "2classes_data")
+    DataPreprocess(data_path)
