@@ -6,7 +6,7 @@ import shutil
 def CopyImgToDest(data_path, class_name, source_path):
 
     train_folder = os.path.join(os.path.join(data_path, 'train'), class_name)
-    val_folder = os.path.join(os.path.join(data_path, 'test'), class_name)
+    val_folder = os.path.join(os.path.join(data_path, 'validate'), class_name)
 
     # Define a list of image extensions
     image_extensions = ['.jpg', '.jpeg', '.png', '.bmp']

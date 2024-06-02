@@ -6,28 +6,38 @@ from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 
 NUM_WORKERS = os.cpu_count()
-def create_dataloaders(train_dir, test_dir, transform, batch_size):
-    num_workers = NUM_WORKERS
+def create_training_dataloaders(train_dir, validate_dir, transform, batch_size):
     train_data = datasets.ImageFolder(train_dir, transform=transform)
-    test_data = datasets.ImageFolder(test_dir, transform=transform)
+    validate_data = datasets.ImageFolder(validate_dir, transform=transform)
     class_names = train_data.classes
 
     train_dataloader = DataLoader(
         train_data,
         batch_size=batch_size,
         shuffle=True,
-        num_workers=num_workers,
+        num_workers=NUM_WORKERS,
         pin_memory=True,
     )
+    validate_dataloader = DataLoader(
+        validate_data,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=NUM_WORKERS,
+        pin_memory=True,
+    )
+
+    return train_dataloader, validate_dataloader, class_names
+def create_testing_dataloaders(test_dir, transform, batch_size): 
+    test_data = datasets.ImageFolder(test_dir, transform=transform)
+    
     test_dataloader = DataLoader(
         test_data,
         batch_size=batch_size,
-        shuffle=True,
-        num_workers=num_workers,
+        shuffle=False,
+        num_workers=NUM_WORKERS,
         pin_memory=True,
     )
-    return train_dataloader, test_dataloader, class_names
-    
+    return test_dataloader
 if __name__ == '__main__':
     # Create image size
     IMG_SIZE = 224
@@ -43,7 +53,7 @@ if __name__ == '__main__':
     train_dir = r'D:\NTNU\112-2\AI\term_project\Recaptcha_v2\data\train'
     test_dir = r'D:\NTNU\112-2\AI\term_project\Recaptcha_v2\data\test'
     # Create data loaders
-    train_dataloader, test_dataloader, class_names = create_dataloaders(
+    train_dataloader, test_dataloader, class_names = create_training_dataloaders(
     train_dir=train_dir,
     test_dir=test_dir,
     transform=manual_transforms, 
