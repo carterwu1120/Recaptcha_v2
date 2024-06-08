@@ -14,14 +14,14 @@ def create_training_dataloaders(train_dir, validate_dir, transform, batch_size):
     train_dataloader = DataLoader(
         train_data,
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=False,
         num_workers=NUM_WORKERS,
         pin_memory=True,
     )
     validate_dataloader = DataLoader(
         validate_data,
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=False,
         num_workers=NUM_WORKERS,
         pin_memory=True,
     )

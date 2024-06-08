@@ -3,6 +3,7 @@
 import os
 import random
 import shutil
+import pandas as pd
 def CopyImgToDest(data_path, class_name, source_path):
 
     train_folder = os.path.join(os.path.join(data_path, 'train'), class_name)
@@ -20,8 +21,8 @@ def CopyImgToDest(data_path, class_name, source_path):
     random.shuffle(imgs_list)
 
     # determine the number of images for each set
-    train_size = int(len(imgs_list) * 0.2)
-    val_size = int(len(imgs_list) * 0.1)
+    train_size = int(len(imgs_list) * 0.8)
+    val_size = int(len(imgs_list) * 0.2)
     
     # Create destination folders if they don't exist
     for folder_path in [train_folder, val_folder]:
@@ -47,7 +48,9 @@ def DataPreprocess(data_path):
         for class_name in class_names:
             source_path = os.path.join(class_path,class_name)
             CopyImgToDest(data_path, images_type_name, source_path)
-
+def TestingDataPreporcess():
+    data_dir = os.path.join("data", "test image")
+    target_list = pd.read_excel("data/testinglabel.xlsx")["class(1 for 1, 0 for 9)"].values.tolist()
 if __name__ == '__main__':
     data_path = os.path.join("data", "2classes_data")
     DataPreprocess(data_path)

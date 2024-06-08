@@ -3,9 +3,16 @@ Contains functions for training and testing a PyTorch model.
 """
 import torch
 import os
+from PIL import Image
 import numpy as np
 from typing import Tuple
 from sklearn import metrics
+from torchvision import transforms
+manual_transforms = transforms.Compose([
+    transforms.Resize((72, 72)),
+    transforms.ToTensor(),
+    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+])  
 def train_Vit(model: torch.nn.Module, 
                dataloader: torch.utils.data.DataLoader, 
                loss_fn: torch.nn.Module, 
@@ -21,6 +28,8 @@ def train_Vit(model: torch.nn.Module,
     for batch, (X, y) in enumerate(dataloader):
         # Send data to target device
         X, y = X.to(device), y.to(device)
+        print(type(X))
+        print(X.size())
         
         # 1. Forward pass
         y_pred = model(X)
@@ -40,6 +49,8 @@ def train_Vit(model: torch.nn.Module,
 
         # Calculate and accumulate accuracy metric across all batches
         y_pred_class = torch.argmax(torch.softmax(y_pred, dim=1), dim=1)
+        x = X[0].numpy().transpose(1, 2, 0)
+    
         train_acc += (y_pred_class == y).sum().item()/len(y_pred)
 
     # Adjust metrics to get average loss and accuracy per batch 
@@ -80,34 +91,110 @@ def validate_Vit(model: torch.nn.Module,
     validate_acc = validate_acc / len(dataloader)
     return validate_loss, validate_acc
 
+# def recaptcha_v2_testing(model: torch.nn.Module, 
+#                         manual_transforms, 
+#                         target_list: list,
+#                         device: torch.device) -> Tuple[float, float]:
+#     # Put model in train mode
+#     model.eval()
+#     img_pred_labels = []
+#     pred_labels = []
+#     # Setup train loss and train accuracy values
+#     auc, acc = 0, 0
+
+#     floder_dir = "data/test image/test image"
+#     for image in os.listdir(floder_dir):
+#         image = os.path.join(floder_dir, image)
+#         image = Image.open(image)
+          
+#         for i in range(3):
+#             for j in range(3):
+#                 tmp_image = image.copy()
+#                 img = manual_transforms(tmp_image.crop((120*(i), 120*(j), 120*(i+1), 120*(j+1)))).unsqueeze(0)
+#                 img_pred = model(img)
+#                 img_pred_label = img_pred.argmax(dim=1)
+#                 img_pred_labels.append(img_pred_label)
+        
+#         if img_pred_labels.count(0)/len(img_pred_labels) > 0.9 :
+#             pred_labels.append(0)
+#         else:
+#             pred_labels.append(1)
+        
+        
+#     all_pred = np.array(pred_labels)
+#     all_target = np.array(target_list)
+
+#     acc = metrics.accuracy_score(all_target, all_pred)
+#     auc = metrics.roc_auc_score(all_target, all_pred)
+#     return acc, auc
 
 def recaptcha_v2_testing(model: torch.nn.Module, 
-                        dataloader: torch.utils.data.DataLoader, 
+                        manual_transforms, 
                         target_list: list,
                         device: torch.device) -> Tuple[float, float]:
     # Put model in train mode
     model.eval()
-    pred_list = []
+    img_pred_labels = []
+    pred_labels = []
+    
     # Setup train loss and train accuracy values
     auc, acc = 0, 0
-
-    # Loop through data loader data batches
-    for batch, (X, y) in enumerate(dataloader):
-        print(type(X))
-        print(len(X))
-        print(X)
-       
-        X = X.to(device)
-
-        y_pred = model(X)
-
-        y_pred_class = y_pred.argmax(dim=1)
-        print(y_pred_class)
-        pred_list.append(y_pred_class.cpu().detach().numpy())
-    
-    all_pred = np.concatenate(np.array(pred_list), axis=0)
+    # floder_dirs = ["data/test/1 image", "data/test/9 image"]
+    floder_dirs = ["data/test image/test image"]
+    for label, floder_dir in enumerate(floder_dirs):
+        for image in os.listdir(floder_dir):
+            
+            image = os.path.join(floder_dir, image)
+            image = Image.open(image).convert('RGB')
+            
+            for i in range(3):
+                for j in range(3):
+                    tmp_image = image.copy()
+                    
+                    img = manual_transforms(tmp_image.crop((120*(i), 120*(j), 120*(i+1), 120*(j+1)))).unsqueeze(0)
+                    img_pred = model(img)
+                    img_pred_label = img_pred.argmax(dim=1)
+                    img_pred_labels.append(img_pred_label)
+            
+            if img_pred_labels.count(0)/len(img_pred_labels) > 0.9 :
+                pred_labels.append(0)
+            else:
+                pred_labels.append(1)
+        
+        
+    all_pred = np.array(pred_labels)
     all_target = np.array(target_list)
 
     acc = metrics.accuracy_score(all_target, all_pred)
     auc = metrics.roc_auc_score(all_target, all_pred)
     return acc, auc
+
+# def recaptcha_v2_testing(model: torch.nn.Module, 
+#                         dataloader: torch.utils.data.DataLoader, 
+#                         target_list: list,
+#                         device: torch.device) -> Tuple[float, float]:
+#     # Put model in train mode
+#     model.eval()
+#     pred_list = []
+    
+#     # Setup train loss and train accuracy values
+#     auc, acc = 0, 0
+
+#     # Loop through data loader data batches
+#     for batch, (X, y) in enumerate(dataloader):
+
+#         X = X.to(device)
+
+#         y_pred = model(X)
+#         y_pred_class = y_pred.argmax(dim=1)
+       
+#         pred_list.append(y_pred_class.cpu().detach().numpy())
+    
+#         # target_list.append(y[0])
+    
+#     all_pred = np.array(pred_list)
+#     all_target = np.array(target_list)
+
+#     acc = metrics.accuracy_score(all_target, all_pred)
+#     auc = metrics.roc_auc_score(all_target, all_pred)
+#     return acc, auc

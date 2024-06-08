@@ -17,25 +17,19 @@ from model import *
 from helper_functions import plot_loss_curves
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
+# python main.py -mode=1 -load_dir=train_ViT2024-06-02-23-29-03
 # Set seeds
 def set_seeds(seed: int=123):
-    """Sets random sets for torch operations.
-
-    Args:
-        seed (int, optional): Random seed to set. Defaults to 42.
-    """
-    # Set the seed for general torch operations
     torch.manual_seed(seed)
-    # Set the seed for CUDA torch operations (ones that happen on the GPU)
     torch.cuda.manual_seed(seed)
 def get_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-mode", default=1, type=int)
+    parser.add_argument("-mode", default=0, type=int)
     parser.add_argument("-img_size", default=72, type=int)
-    parser.add_argument("-batch_size", default=16, type=int)
+    parser.add_argument("-batch_size", default=8, type=int)
     parser.add_argument("-patch_size", default=6, type=int)
     parser.add_argument("-embedding_dim", default=64, type=int)
-    parser.add_argument("-mlp_size", default=256, type=int)
+    parser.add_argument("-mlp_size", default=128, type=int)
     parser.add_argument("-num_heads", default=4, type=int)
     parser.add_argument("-attn_dropout", default=0, type=float)
     parser.add_argument("-mlp_dropout", default=0.1, type=float)
@@ -43,12 +37,12 @@ def get_parser():
     parser.add_argument("-betas", default=(0.9, 0.999), type=any)
     parser.add_argument("-weight_decay", default=0.001, type=float)
     parser.add_argument("-data_dir", default="data\\2classes_data", type=str)
-    parser.add_argument("-load_dir", default="train_ViT2024-06-01-15-11-11", type=str)
+    parser.add_argument("-load_dir", default="", type=str)
     parser.add_argument("-save_dir", default="logs", type=str)
     parser.add_argument("-model_name", default="ViT.pt", type=str)
     parser.add_argument("-num_classes", default=2, type=int)
     parser.add_argument("-epochs", default=200, type=int)
-    parser.add_argument("-threshold", default=0.7, type=float)
+    
     return parser
 
 def save_train(save_dir):
@@ -78,25 +72,16 @@ def load_model(load_dir, save_dir):
     
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     start_epoch = checkpoint['epoch']
-    best_val_auc = checkpoint['acc']
+    best_val_acc = checkpoint['acc']
 
     log_file = os.path.join(save_dir, '_log.txt')
     log = open(log_file, 'a')
 
-    return log, save_dir, model_file, start_epoch, best_val_auc
+    return log, save_dir, model_file, start_epoch, best_val_acc
 if __name__ == '__main__':
     parser = get_parser()
     args = parser.parse_args()
-    print(args)
-
-    # Create transform pipeline manually
-    manual_transforms = transforms.Compose([
         
-        transforms.Resize((args.img_size, args.img_size)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])           
-    print(f"Manually created transforms: {manual_transforms}")
     # Create an instance of ViT with the number of classes we're working with (pizza, steak, sushi)
     model = ViT(img_size=args.img_size, 
                 patch_size=args.patch_size, 
@@ -113,7 +98,21 @@ if __name__ == '__main__':
                                 betas=args.betas, # default values but also mentioned in ViT paper section 4.1 (Training & Fine-tuning)
                                 weight_decay=args.weight_decay) # from the ViT paper section 4.1 (Training & Fine-tuning) and Table 3 for ViT-* ImageNet-1k
 
+    if args.load_dir:
+        log, save_dir, model_file, start_epoch, best_acc = load_model(args.load_dir, args.save_dir)
+    else:
+        log, save_dir, model_file = save_train(args.save_dir)
+        start_epoch = 0  
+        best_acc = 0 
     if args.mode == 0:
+    # Create transform pipeline manually
+        manual_transforms = transforms.Compose([
+            transforms.Resize((args.img_size, args.img_size)),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ])  
+        print(f"Manually created transforms: {manual_transforms}") 
         train_dir = os.path.join(args.data_dir, "train")
         validate_dir = os.path.join(args.data_dir, "validate")
         
@@ -182,12 +181,6 @@ if __name__ == '__main__':
             row_settings=["var_names"]
             )
 
-        if args.load_dir:
-            log, save_dir, model_file, start_epoch, best_acc = load_model(args.load_dir, args.save_dir)
-        else:
-            log, save_dir, model_file = save_train(args.save_dir)
-            start_epoch = 0  
-            best_acc = 0 
         # Save args
         print(args, file=log,end="\n-\n")
         log.flush()
@@ -244,6 +237,13 @@ if __name__ == '__main__':
             
         plot_loss_curves(results, args.save_dir)
     elif args.mode == 1:
+        manual_transforms = transforms.Compose([
+            transforms.Resize((args.img_size, args.img_size)),
+            # transforms.RandomHorizontalFlip(p=0.5),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ])  
+        print(f"Manually created transforms: {manual_transforms}") 
         test_dir = os.path.join("data", "test image")
         test_dataloader = create_testing_dataloaders(
             test_dir=test_dir,
@@ -252,10 +252,16 @@ if __name__ == '__main__':
         )
         
         target_list = pd.read_excel("data/testinglabel.xlsx")["class(1 for 1, 0 for 9)"].values.tolist()
-        _ = load_model(args.load_dir, args.save_dir)
+        target_list = [1 if target == 0 else 0 for target in target_list]
+        
+        # _ = load_model(args.load_dir, args.save_dir)
         print("start testing")
+        # auc, acc = recaptcha_v2_testing(model=model, 
+        #                                 dataloader=test_dataloader, 
+        #                                 target_list=target_list, 
+        #                                 device=device)
         auc, acc = recaptcha_v2_testing(model=model, 
-                                        dataloader=test_dataloader, 
+                                        manual_transforms=manual_transforms, 
                                         target_list=target_list, 
                                         device=device)
         print("auc : ", auc)
